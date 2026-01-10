@@ -73,7 +73,7 @@ description: project-desc
     const service = new SkillManager();
     await service.discoverSkills(storage, [mockExtension]);
 
-    const skills = service.getSkills();
+    const skills = service.getSkills().filter((s) => !s.isBuiltin);
     expect(skills).toHaveLength(3);
     const names = skills.map((s) => s.name);
     expect(names).toContain('skill-extension');
@@ -128,14 +128,15 @@ description: project-desc
     const service = new SkillManager();
     await service.discoverSkills(storage, [mockExtension]);
 
-    const skills = service.getSkills();
+    const skills = service.getSkills().filter((s) => !s.isBuiltin);
     expect(skills).toHaveLength(1);
     expect(skills[0].description).toBe('project-desc');
 
     // Test User > Extension
     vi.spyOn(storage, 'getProjectSkillsDir').mockReturnValue('/non-existent');
     await service.discoverSkills(storage, [mockExtension]);
-    expect(service.getSkills()[0].description).toBe('user-desc');
+    const userSkills = service.getSkills().filter((s) => !s.isBuiltin);
+    expect(userSkills[0].description).toBe('user-desc');
   });
 
   it('should filter disabled skills in getSkills but not in getAllSkills', async () => {
@@ -159,9 +160,11 @@ description: desc1
     await service.discoverSkills(storage);
     service.setDisabledSkills(['skill1']);
 
-    expect(service.getSkills()).toHaveLength(0);
-    expect(service.getAllSkills()).toHaveLength(1);
-    expect(service.getAllSkills()[0].disabled).toBe(true);
+    expect(service.getSkills().filter((s) => !s.isBuiltin)).toHaveLength(0);
+    expect(service.getAllSkills().filter((s) => !s.isBuiltin)).toHaveLength(1);
+    expect(
+      service.getAllSkills().find((s) => s.name === 'skill1')?.disabled,
+    ).toBe(true);
   });
 
   it('should filter built-in skills in getDisplayableSkills', async () => {
