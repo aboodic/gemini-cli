@@ -76,19 +76,17 @@ If your skill includes scripts in the `scripts/` directory:
 
 To validate that a skill is correctly discovered and can be activated:
 
-1.  **Verification Choice**: **Ask the user first** if they want to verify
+2.  **Verification Choice**: **Ask the user first** if they want to verify
     **manually** (interactive session, requires `/skills reload`) or have
     **you** (the agent) verify it on their behalf. Mention that agent-led
     verification involves the agent invoking itself headlessly and will require
     extra confirmations.
-2.  **Security WARNING**: If the user chooses agent-led verification, **you must
-    explicitly WARN them** that you will be invoking Gemini CLI on their behalf
-    and will need to allow-list the tools required for verification (including
-    `activate_skill`). This means those tools will run without further
-    confirmation for that specific command.
-3.  **Confirmation & Invocation**: Once the user provides verbal confirmation,
-    inform them you are using the `--allowed-tools` flag and then execute the
-    targeted headless command:
+3.  **Security WARNING & Invocation**: If the user chooses agent-led
+    verification, provide a **WARNING** that you will be invoking Gemini CLI on
+    their behalf and will need to allow-list the tools required for verification
+    (including `activate_skill`). This means those tools will run without
+    further confirmation _within that headless process_. Immediately follow this
+    warning with the tool call to execute the targeted headless command:
     `gemini --debug --allowed-tools activate_skill,<minimal_tools> "your targeted prompt"`
 4.  **Troubleshooting**: Inspect the `--debug` logs to verify skill discovery
     and activation within the new process.

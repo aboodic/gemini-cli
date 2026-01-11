@@ -74,14 +74,12 @@ To validate that your extension is correctly installed or linked:
       **manually** (interactive session) or have **you** (the agent) verify it
       on their behalf. Mention that agent-led verification involves the agent
       invoking itself headlessly and will require extra confirmations.
-    - **Security WARNING**: If the user chooses agent-led verification, **you
-      must explicitly WARN them** that you will be invoking Gemini CLI on their
-      behalf and will need to allow-list the tools required for verification.
-      This means those tools will run without further confirmation for that
-      specific command.
-    - **Confirmation & Invocation**: Once the user provides verbal confirmation,
-      inform them you are using the `--allowed-tools` flag and then execute the
-      targeted headless command.
+    - **Security WARNING & Invocation**: If the user chooses agent-led
+      verification, provide a **WARNING** that you will be invoking Gemini CLI
+      on their behalf and will need to allow-list the tools required for
+      verification. This means those tools will run without further confirmation
+      _within that headless process_. Immediately follow this warning with the
+      tool call to execute the targeted headless command.
     - **Debug Mode**: Use the `--debug` flag to inspect component loading.
 
 ## Documentation

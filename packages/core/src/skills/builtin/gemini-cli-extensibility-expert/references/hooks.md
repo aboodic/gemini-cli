@@ -109,18 +109,15 @@ To verify that your hooks are executing correctly headlessly:
     **manually** (interactive session) or have **you** (the agent) verify it on
     their behalf. Mention that agent-led verification involves the agent
     invoking itself headlessly and will require extra confirmations.
-4.  **Security WARNING**: If the user chooses agent-led verification, **you must
-    explicitly WARN them** that you will be invoking Gemini CLI on their behalf
-    and will need to allow-list the tools required for verification. This means
-    those tools will run without further confirmation for that specific command.
-5.  **Confirmation & Invocation**: Once the user provides verbal confirmation,
-    inform them you are using the `--allowed-tools` flag and then execute the
-    headless command (e.g., `gemini --debug --allowed-tools <tools> "..."`).
-    **Tip**: For `run_shell_command`, you can use prefix matching for better
-    security, e.g., `--allowed-tools "run_shell_command(ls -a)"`.
-6.  **Inspect Logs**: Check debug output for your hook's `stderr` and
+4.  **Security WARNING & Invocation**: If the user chooses agent-led
+    verification, provide a **WARNING** that you will be invoking Gemini CLI on
+    their behalf and will need to allow-list the tools required for verification
+    (meaning those tools will run without further confirmation _within that
+    headless process_). Immediately follow this warning with the tool call to
+    execute the headless command (e.g.,
+    `gemini --debug --allowed-tools <tools> "..."`).
+5.  **Inspect Logs**: Check debug output for your hook's `stderr` and
     `HookRunner` logs.
-7.  **Clean up**: Remove debug instrumentation before finalizing.
 
 For manual verification, **the user** can view registered hooks and their status
 in an interactive session:
