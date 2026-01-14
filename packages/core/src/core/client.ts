@@ -983,6 +983,8 @@ export class GeminiClient {
         this.updateTelemetryTokenCount();
         this.forceFullIdeContext = true;
       }
+
+      this.hasFailedCompressionAttempt = !!info.isStillAboveThreshold;
     }
 
     return info;

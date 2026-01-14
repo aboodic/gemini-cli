@@ -15,7 +15,6 @@ import { ToolErrorType } from '../tools/tool-error.js';
 import { BINARY_EXTENSIONS } from './ignorePatterns.js';
 import { createRequire as createModuleRequire } from 'node:module';
 import { debugLogger } from './debugLogger.js';
-import { READ_FILE_TOOL_NAME } from '../tools/tool-names.js';
 
 const requireModule = createModuleRequire(import.meta.url);
 
@@ -517,66 +516,62 @@ export async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-export async function saveTruncatedContent(
-  content: string,
-  callId: string,
-  projectTempDir: string,
-  threshold: number,
-  truncateLines: number,
-): Promise<{ content: string; outputFile?: string }> {
-  if (content.length <= threshold) {
-    return { content };
-  }
+/**
+ * Formats a truncated message for tool output, handling multi-line and single-line (elephant) cases.
+ */
+export function formatTruncatedToolOutput(
+  contentStr: string,
+  outputFile: string,
+  truncateLines: number = 30,
+): string {
+  const physicalLines = contentStr.split('\n');
+  const totalPhysicalLines = physicalLines.length;
 
-  let lines = content.split('\n');
-  let fileContent = content;
-
-  // If the content is long but has few lines, wrap it to enable line-based truncation.
-  if (lines.length <= truncateLines) {
-    const wrapWidth = 120; // A reasonable width for wrapping.
-    const wrappedLines: string[] = [];
-    for (const line of lines) {
-      if (line.length > wrapWidth) {
-        for (let i = 0; i < line.length; i += wrapWidth) {
-          wrappedLines.push(line.substring(i, i + wrapWidth));
-        }
-      } else {
-        wrappedLines.push(line);
+  if (totalPhysicalLines > 1) {
+    // Multi-line case: show last N lines, but protect against "elephant" lines.
+    const lastLines = physicalLines.slice(-truncateLines);
+    let someLinesTruncatedInWidth = false;
+    const processedLines = lastLines.map((line) => {
+      if (line.length > 1000) {
+        someLinesTruncatedInWidth = true;
+        return line.substring(0, 1000) + '... [LINE WIDTH TRUNCATED]';
       }
-    }
-    lines = wrappedLines;
-    fileContent = lines.join('\n');
-  }
+      return line;
+    });
 
-  const head = Math.floor(truncateLines / 5);
-  const beginning = lines.slice(0, head);
-  const end = lines.slice(-(truncateLines - head));
-  const truncatedContent =
-    beginning.join('\n') + '\n... [CONTENT TRUNCATED] ...\n' + end.join('\n');
-
-  // Sanitize callId to prevent path traversal.
-  const safeFileName = `${path.basename(callId)}.output`;
-  const outputFile = path.join(projectTempDir, safeFileName);
-  try {
-    await fsPromises.writeFile(outputFile, fileContent);
-
-    return {
-      content: `Tool output was too large and has been truncated.
-The full output has been saved to: ${outputFile}
-To read the complete output, use the ${READ_FILE_TOOL_NAME} tool with the absolute file path above. For large files, you can use the offset and limit parameters to read specific sections:
-- ${READ_FILE_TOOL_NAME} tool with offset=0, limit=100 to see the first 100 lines
-- ${READ_FILE_TOOL_NAME} tool with offset=N to skip N lines from the beginning
-- ${READ_FILE_TOOL_NAME} tool with limit=M to read only M lines at a time
-The truncated output below shows the beginning and end of the content. The marker '... [CONTENT TRUNCATED] ...' indicates where content was removed.
-This allows you to efficiently examine different parts of the output without loading the entire file.
-Truncated part of the output:
-${truncatedContent}`,
-      outputFile,
-    };
-  } catch (_error) {
-    return {
-      content:
-        truncatedContent + `\n[Note: Could not save full output to file]`,
-    };
+    const widthWarning = someLinesTruncatedInWidth
+      ? ' (some long lines truncated)'
+      : '';
+    return `Output too large. Showing the last ${processedLines.length} of ${totalPhysicalLines} lines${widthWarning}. For full output see: ${outputFile}
+...
+${processedLines.join('\n')}`;
+  } else {
+    // Single massive line case: use character-based truncation description.
+    const MAX_CHARS = 30000; // ~7,500 tokens
+    const snippet = contentStr.slice(-MAX_CHARS);
+    return `Output too large. Showing the last ${MAX_CHARS.toLocaleString()} characters of the output. For full output see: ${outputFile}
+...${snippet}`;
   }
 }
+
+export async function saveTruncatedToolOutput(
+  content: string,
+  toolName: string,
+  id: string | number, // Accept string (callId) or number (truncationId)
+  projectTempDir: string,
+): Promise<{ outputFile: string; totalLines: number }> {
+  const safeToolName = toolName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const fileName = `${safeToolName}_${id}.txt`;
+  const outputFile = path.join(projectTempDir, fileName);
+
+  await fsPromises.writeFile(outputFile, content);
+
+  const lines = content.split('\n');
+  return {
+    outputFile,
+    totalLines: lines.length,
+  };
+}
+
+// Alias for backward compatibility during refactor, or we can just update call sites.
+export const saveTruncatedCompressionContent = saveTruncatedToolOutput;

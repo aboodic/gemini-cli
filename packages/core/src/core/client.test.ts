@@ -385,6 +385,7 @@ describe('Gemini Client (client.ts)', () => {
       originalTokenCount = 1000,
       newTokenCount = 500,
       compressionStatus = CompressionStatus.COMPRESSED,
+      isStillAboveThreshold = false,
     } = {}) {
       const mockOriginalChat: Partial<GeminiChat> = {
         getHistory: vi.fn((_curated?: boolean) => chatHistory),
@@ -415,6 +416,7 @@ describe('Gemini Client (client.ts)', () => {
           originalTokenCount,
           newTokenCount,
           compressionStatus,
+          isStillAboveThreshold,
         },
       });
 
@@ -461,11 +463,12 @@ describe('Gemini Client (client.ts)', () => {
           compressionStatus: CompressionStatus.COMPRESSED,
           newTokenCount: compressedTokenCount,
           originalTokenCount: 100,
+          isStillAboveThreshold: false,
         });
       });
 
       it('yields the result even if the compression inflated the tokens', async () => {
-        const { client, estimatedNewTokenCount } = setup({
+        const { estimatedNewTokenCount } = setup({
           originalTokenCount: 100,
           newTokenCount: 200,
           compressionStatus:
@@ -479,6 +482,7 @@ describe('Gemini Client (client.ts)', () => {
             CompressionStatus.COMPRESSION_FAILED_INFLATED_TOKEN_COUNT,
           newTokenCount: estimatedNewTokenCount,
           originalTokenCount: 100,
+          isStillAboveThreshold: false,
         });
         // IMPORTANT: The change in client.ts means setLastPromptTokenCount is NOT called on failure
         expect(
@@ -573,6 +577,43 @@ describe('Gemini Client (client.ts)', () => {
       ).toBe(true);
     });
 
+    it('should latch hasFailedCompressionAttempt if still above threshold after compression', async () => {
+      const { client } = setup({
+        originalTokenCount: 1000,
+        newTokenCount: 800,
+        compressionStatus: CompressionStatus.COMPRESSED,
+        isStillAboveThreshold: true,
+      });
+
+      await client.tryCompressChat('prompt-1', false);
+
+      expect(
+        (client as unknown as { hasFailedCompressionAttempt: boolean })
+          .hasFailedCompressionAttempt,
+      ).toBe(true);
+    });
+
+    it('should reset hasFailedCompressionAttempt if below threshold after compression', async () => {
+      const { client } = setup({
+        originalTokenCount: 1000,
+        newTokenCount: 400,
+        compressionStatus: CompressionStatus.COMPRESSED,
+        isStillAboveThreshold: false,
+      });
+
+      // Manually set it to true first
+      (
+        client as unknown as { hasFailedCompressionAttempt: boolean }
+      ).hasFailedCompressionAttempt = true;
+
+      await client.tryCompressChat('prompt-1', false);
+
+      expect(
+        (client as unknown as { hasFailedCompressionAttempt: boolean })
+          .hasFailedCompressionAttempt,
+      ).toBe(false);
+    });
+
     it('should not trigger summarization if token count is below threshold', async () => {
       const MOCKED_TOKEN_LIMIT = 1000;
       const originalTokenCount = MOCKED_TOKEN_LIMIT * 0.699;
@@ -583,6 +624,7 @@ describe('Gemini Client (client.ts)', () => {
           originalTokenCount,
           newTokenCount: originalTokenCount,
           compressionStatus: CompressionStatus.NOOP,
+          isStillAboveThreshold: false,
         },
       });
 
@@ -594,6 +636,7 @@ describe('Gemini Client (client.ts)', () => {
         compressionStatus: CompressionStatus.NOOP,
         newTokenCount: originalTokenCount,
         originalTokenCount,
+        isStillAboveThreshold: false,
       });
       expect(newChat).toBe(initialChat);
     });
@@ -612,6 +655,7 @@ describe('Gemini Client (client.ts)', () => {
         compressionStatus: CompressionStatus.NOOP,
         originalTokenCount: 50,
         newTokenCount: 50,
+        isStillAboveThreshold: false,
       });
     });
 
