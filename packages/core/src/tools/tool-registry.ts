@@ -22,6 +22,7 @@ import type { MessageBus } from '../confirmation-bus/message-bus.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import { coreEvents } from '../utils/events.js';
 import { DISCOVERED_TOOL_PREFIX } from './tool-names.js';
+import { ToolSearchTool } from './tool-search-tool.js';
 
 type ToolParams = Record<string, unknown>;
 
@@ -193,10 +194,17 @@ export class ToolRegistry {
   private allKnownTools: Map<string, AnyDeclarativeTool> = new Map();
   private config: Config;
   private messageBus: MessageBus;
+  private activatedMcpTools: Set<string> = new Set();
+  private toolSearchTool: ToolSearchTool;
+  private readonly MAX_TOOL_CONTEXT_CHARS = 30000; // ~7.5k tokens
 
   constructor(config: Config, messageBus: MessageBus) {
     this.config = config;
     this.messageBus = messageBus;
+    this.toolSearchTool = new ToolSearchTool(
+      this.searchTools.bind(this),
+      messageBus,
+    );
   }
 
   getMessageBus(): MessageBus {
@@ -466,6 +474,47 @@ export class ToolRegistry {
     return !possibleNames.some((name) => excludeTools.has(name));
   }
 
+  private calculateSchemaSize(tools: AnyDeclarativeTool[]): number {
+    return tools.reduce(
+      (acc, tool) => acc + JSON.stringify(tool.schema).length,
+      0,
+    );
+  }
+
+  private async searchTools(query: string): Promise<ToolResult> {
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const matches: AnyDeclarativeTool[] = [];
+
+    const allTools = this.getActiveTools();
+    for (const tool of allTools) {
+      const text = (tool.name + ' ' + (tool.description || '')).toLowerCase();
+      if (terms.every((term) => text.includes(term))) {
+        matches.push(tool);
+      }
+    }
+
+    // Activate them
+    for (const tool of matches) {
+      if (tool instanceof DiscoveredMCPTool) {
+        this.activatedMcpTools.add(tool.name);
+      }
+    }
+
+    if (matches.length === 0) {
+      const msg = 'No tools found matching your query.';
+      return { llmContent: msg, returnDisplay: msg };
+    }
+
+    const descriptions = matches
+      .map((t) => `Tool: ${t.name}\nDescription: ${t.description}`)
+      .join('\n\n');
+    const msg = `Found ${matches.length} tools. They have been added to your context for the next turn.\n\n${descriptions}`;
+    return {
+      llmContent: msg,
+      returnDisplay: msg,
+    };
+  }
+
   /**
    * Retrieves the list of tool schemas (FunctionDeclaration array).
    * Extracts the declarations from the ToolListUnion structure.
@@ -473,10 +522,29 @@ export class ToolRegistry {
    * @returns An array of FunctionDeclarations.
    */
   getFunctionDeclarations(): FunctionDeclaration[] {
+    const allActiveTools = this.getActiveTools();
+    const totalSize = this.calculateSchemaSize(allActiveTools);
+
+    // If total size is within limit, return all tools
+    if (totalSize <= this.MAX_TOOL_CONTEXT_CHARS) {
+      return allActiveTools.map((tool) => tool.schema);
+    }
+
+    // Otherwise, filter tools
     const declarations: FunctionDeclaration[] = [];
-    this.getActiveTools().forEach((tool) => {
-      declarations.push(tool.schema);
-    });
+    for (const tool of allActiveTools) {
+      // Keep non-MCP tools and already activated MCP tools
+      if (
+        !(tool instanceof DiscoveredMCPTool) ||
+        this.activatedMcpTools.has(tool.name)
+      ) {
+        declarations.push(tool.schema);
+      }
+    }
+
+    // Always add the search tool when we are filtering
+    declarations.push(this.toolSearchTool.schema);
+
     return declarations;
   }
 
@@ -530,8 +598,16 @@ export class ToolRegistry {
    * Get the definition of a specific tool.
    */
   getTool(name: string): AnyDeclarativeTool | undefined {
+    if (name === this.toolSearchTool.name) {
+      return this.toolSearchTool;
+    }
+
     const tool = this.allKnownTools.get(name);
     if (tool && this.isActiveTool(tool)) {
+      // If the tool is accessed, make sure it stays activated for future context
+      if (tool instanceof DiscoveredMCPTool) {
+        this.activatedMcpTools.add(tool.name);
+      }
       return tool;
     }
     return;
