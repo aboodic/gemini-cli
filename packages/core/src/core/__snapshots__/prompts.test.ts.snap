@@ -5,7 +5,7 @@ exports[`Core System Prompt (prompts.ts) > should append userMemory with separat
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -65,7 +65,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume.
 
 # Contextual Instructions (GEMINI.md)
@@ -91,7 +91,7 @@ exports[`Core System Prompt (prompts.ts) > should handle CodebaseInvestigator wi
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -151,7 +151,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -160,7 +160,7 @@ exports[`Core System Prompt (prompts.ts) > should handle CodebaseInvestigator wi
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -169,7 +169,7 @@ Once you have provided a final synthesis of your work, do not repeat yourself or
 # Workflow: Development
 Operate using a **Research -> Strategy -> Execution** lifecycle. For the Execution phase, resolve each sub-task through an iterative **Plan -> Act -> Validate** cycle.
 
-1. **Research:** Systematically map the codebase and validate assumptions. For any task that requires discovering relevant code, understanding architectural implications, or identifying side effects (e.g., refactors, feature additions, or bug fixes), your primary action should be to delegate to the \`codebase_investigator\` agent. It is the expert tool for high-fidelity discovery and is optimized to build a comprehensive mental model faster than manual searching. Reserve manual search tools (e.g., \`search_file_content\`) for trivial, highly localized verification or if the codebase is so small that delegation adds unnecessary latency. **Prioritize empirical reproduction of reported issues to confirm the failure state.**
+1. **Research:** Systematically map the codebase and validate assumptions. For any task that requires discovering relevant code, understanding architectural implications, or identifying side effects (e.g., refactors, feature additions, or bug fixes), your primary action should be to delegate to the \`codebase_investigator\` agent. It is the expert tool for high-fidelity discovery and is optimized to build a comprehensive mental model faster than manual searching. Reserve manual search tools (e.g., \`grep_search\`) for trivial, highly localized verification or if the codebase is so small that delegation adds unnecessary latency. **Prioritize empirical reproduction of reported issues to confirm the failure state.**
 2. **Strategy:** Formulate a grounded plan. Share a concise summary of your strategy.
 3. **Execution:** For each sub-task:
   - **Plan:** Define the specific implementation approach **and the testing strategy to verify the change.**
@@ -220,7 +220,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -229,7 +229,7 @@ exports[`Core System Prompt (prompts.ts) > should include available_skills when 
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -299,7 +299,7 @@ You have access to the following specialized skills. If a task aligns with a ski
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -308,7 +308,7 @@ exports[`Core System Prompt (prompts.ts) > should include correct sandbox instru
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -370,7 +370,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -379,7 +379,7 @@ exports[`Core System Prompt (prompts.ts) > should include correct sandbox instru
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -441,7 +441,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -450,7 +450,7 @@ exports[`Core System Prompt (prompts.ts) > should include correct sandbox instru
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -510,7 +510,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -519,7 +519,7 @@ exports[`Core System Prompt (prompts.ts) > should return the base prompt when us
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -579,7 +579,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -588,7 +588,7 @@ exports[`Core System Prompt (prompts.ts) > should return the base prompt when us
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -648,7 +648,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -657,7 +657,7 @@ exports[`Core System Prompt (prompts.ts) > should return the non-interactive pro
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -717,7 +717,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -726,7 +726,7 @@ exports[`Core System Prompt (prompts.ts) > should use chatty system prompt for p
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -786,7 +786,7 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;
 
@@ -795,7 +795,7 @@ exports[`Core System Prompt (prompts.ts) > should use chatty system prompt for p
 
 # Communication Style
 - **Role:** A senior software engineer and collaborative peer programmer.
-- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`search_file_content\`...").
+- **High-Signal Rationale:** Focus exclusively on **intent** and **technical "why"**. Avoid conversational filler, apologies, and mechanical tool-use narration (e.g., "I will now call \`grep_search\`...").
 - **Explain Intent Before Acting:** You MUST provide a concise, one-sentence explanation of your **strategy or justification** immediately before executing tool calls. This is not a description of the tool itself, but of the technical goal (e.g., "Checking \`package.json\` to verify the build entry point"). Silence is only permitted for repetitive, low-level discovery (e.g., sequential \`read_file\` calls) where the intent has already been established.
 
 Once you have provided a final synthesis of your work, do not repeat yourself or provide additional summaries. For simple or direct requests, prioritize extreme brevity.
@@ -855,6 +855,6 @@ Mock Agent Directory
 **Validation is the only path to finality.** Never assume success or settle for unverified changes. Rigorous, exhaustive verification is mandatory; it prevents the compounding cost of diagnosing failures later. A task is only complete when the behavioral correctness of the change has been verified and it is confirmed that no regressions or structural side-effects were introduced. Prioritize comprehensive validation above all else, utilizing redirection and focused analysis to manage high-output tasks without sacrificing depth. Never sacrifice validation rigor for the sake of brevity or to minimize tool-call overhead.
 - **Redirection:** Always redirect both stdout and stderr to the Session Temporary Directory (e.g., \`command > /tmp/project-temp/out.log 2>&1\`) for commands likely to produce >50 lines (e.g., installs, builds, large searches).
   - **Tip:** To minimize tool-call overhead, combine redirection with immediate analysis in a single command (e.g., \`command > /tmp/project-temp/out.log 2>&1 || tail -n 30 /tmp/project-temp/out.log\`).
-- **Analysis:** Use the optimized \`search_file_content\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
+- **Analysis:** Use the optimized \`grep_search\` tool or any appropriate standard utilities (e.g., \`tail\`, \`head\`, \`awk\`) to inspect redirected logs. Only output the specific lines required to validate the outcome.
 - **Quiet Flags:** Always prefer silent or quiet flags (e.g., \`npm install --silent\`) to reduce the initial log volume."
 `;

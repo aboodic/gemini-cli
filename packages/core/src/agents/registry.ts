@@ -472,7 +472,7 @@ export class AgentRegistry {
 
     return `
 # Sub-Agents
-Sub-agents are specialized expert agents that you can use to assist you in the completion of all or part of a task. ALWAYS use \`${DELEGATE_TO_AGENT_TOOL_NAME}\` to delegate to a sub-agent if one exists that has expertise relevant to your task.
+Sub-agents are specialized expert agents that you can use to assist you in the completion of all or part of a task. ALWAYS use \`${DELEGATE_TO_AGENT_TOOL_NAME}\` to delegate to a sub-agent if one exists that has expertise relevant to your task. Sub-agents provide depth and specialized perspective that may not be immediately apparent; leverage them as the primary mechanism for initial discovery to quickly gain context on patterns, dependencies, and implications before proceeding to implementation.
 
 For example:
 - Prompt: 'Fix test', Description: 'An agent with expertise in fixing tests.' -> should use the sub-agent.

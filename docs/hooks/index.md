@@ -616,15 +616,15 @@ This command:
 
 ### Tool name mapping
 
-| Claude Code | Gemini CLI            |
-| ----------- | --------------------- |
-| `Bash`      | `run_shell_command`   |
-| `Edit`      | `replace`             |
-| `Read`      | `read_file`           |
-| `Write`     | `write_file`          |
-| `Glob`      | `glob`                |
-| `Grep`      | `search_file_content` |
-| `LS`        | `list_directory`      |
+| Claude Code | Gemini CLI          |
+| ----------- | ------------------- |
+| `Bash`      | `run_shell_command` |
+| `Edit`      | `replace`           |
+| `Read`      | `read_file`         |
+| `Write`     | `write_file`        |
+| `Glob`      | `glob`              |
+| `Grep`      | `grep_search`       |
+| `LS`        | `list_directory`    |
 
 ## Tool and Event Matchers Reference
 
@@ -644,7 +644,7 @@ matchers:
 
 - `list_directory` - List directory contents
 - `glob` - Find files matching a pattern
-- `search_file_content` - Search within file contents
+- `grep_search` - Search within file contents
 
 #### Execution
 

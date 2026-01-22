@@ -22,6 +22,10 @@ import { ToolErrorType } from './tool-error.js';
 import { GREP_TOOL_NAME } from './tool-names.js';
 import { debugLogger } from '../utils/debugLogger.js';
 
+// --- Constants ---
+
+const DEFAULT_TOTAL_MAX_MATCHES = 100;
+
 // --- Interfaces ---
 
 /**
@@ -148,6 +152,10 @@ class GrepToolInvocation extends BaseToolInvocation<
         allMatches = allMatches.concat(matches);
       }
 
+      if (allMatches.length > DEFAULT_TOTAL_MAX_MATCHES) {
+        allMatches = allMatches.slice(0, DEFAULT_TOTAL_MAX_MATCHES);
+      }
+
       let searchLocationDescription: string;
       if (searchDirAbs === null) {
         const numDirs = workspaceContext.getDirectories().length;
@@ -180,10 +188,15 @@ class GrepToolInvocation extends BaseToolInvocation<
 
       const matchCount = allMatches.length;
       const matchTerm = matchCount === 1 ? 'match' : 'matches';
+      const wasTruncated = matchCount >= DEFAULT_TOTAL_MAX_MATCHES;
 
-      let llmContent = `Found ${matchCount} ${matchTerm} for pattern "${this.params.pattern}" ${searchLocationDescription}${this.params.include ? ` (filter: "${this.params.include}")` : ''}:
----
-`;
+      let llmContent = `Found ${matchCount} ${matchTerm} for pattern "${this.params.pattern}" ${searchLocationDescription}${this.params.include ? ` (filter: "${this.params.include}")` : ''}`;
+
+      if (wasTruncated) {
+        llmContent += ` (results limited to ${DEFAULT_TOTAL_MAX_MATCHES} matches for performance)`;
+      }
+
+      llmContent += `:\n---\n`;
 
       for (const filePath in matchesByFile) {
         llmContent += `File: ${filePath}\n`;
@@ -194,9 +207,14 @@ class GrepToolInvocation extends BaseToolInvocation<
         llmContent += '---\n';
       }
 
+      let displayMessage = `Found ${matchCount} ${matchTerm}`;
+      if (wasTruncated) {
+        displayMessage += ` (limited)`;
+      }
+
       return {
         llmContent: llmContent.trim(),
-        returnDisplay: `Found ${matchCount} ${matchTerm}`,
+        returnDisplay: displayMessage,
       };
     } catch (error) {
       debugLogger.warn(`Error during GrepLogic execution: ${error}`);
@@ -576,7 +594,7 @@ export class GrepTool extends BaseDeclarativeTool<GrepToolParams, ToolResult> {
     super(
       GrepTool.Name,
       'SearchText',
-      'Searches for a regular expression pattern within the content of files in a specified directory (or current working directory). Can filter files by a glob pattern. Returns the lines containing matches, along with their file paths and line numbers.',
+      'Searches for a regular expression pattern within file contents. Max 100 matches.',
       Kind.Search,
       {
         properties: {

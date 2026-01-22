@@ -25,7 +25,7 @@ import {
 } from '../utils/ignorePatterns.js';
 import { GeminiIgnoreParser } from '../utils/geminiIgnoreParser.js';
 
-const DEFAULT_TOTAL_MAX_MATCHES = 20000;
+const DEFAULT_TOTAL_MAX_MATCHES = 100;
 
 function getRgCandidateFilenames(): readonly string[] {
   return process.platform === 'win32' ? ['rg.exe', 'rg'] : ['rg'];
@@ -498,7 +498,7 @@ export class RipGrepTool extends BaseDeclarativeTool<
     super(
       RipGrepTool.Name,
       'SearchText',
-      'FAST, optimized search powered by `ripgrep`. PREFERRED over standard `run_shell_command("grep ...")` due to better performance and automatic output limiting (max 20k matches).',
+      'Searches for a regular expression pattern within file contents. Max 100 matches.',
       Kind.Search,
       {
         properties: {

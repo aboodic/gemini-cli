@@ -66,11 +66,7 @@ describe('Delegation Strategy Evals', () => {
     assert: async (rig, _result) => {
       // We expect it NOT to delegate, and instead use manual tools or edit.
       await rig.expectNoToolCall(['delegate_to_agent']);
-      await rig.expectToolCallSuccess([
-        'search_file_content',
-        'read_file',
-        'replace',
-      ]);
+      await rig.expectToolCallSuccess(['grep_search', 'read_file', 'replace']);
     },
   });
 });
