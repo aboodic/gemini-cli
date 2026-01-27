@@ -861,6 +861,9 @@ export class Config {
     }
     this.initialized = true;
 
+    // Initialize storage (includes migration to new format if needed)
+    await this.storage.initialize();
+
     // Add pending directories to workspace context
     for (const dir of this.pendingIncludeDirectories) {
       this.workspaceContext.addDirectory(dir);

@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { debugLogger } from 'src/utils/debugLogger.js';
+import { debugLogger } from '../utils/debugLogger.js';
 
 export interface RegistryData {
   projects: Record<string, string>;
@@ -19,9 +20,33 @@ export interface RegistryData {
  */
 export class ProjectRegistry {
   private readonly registryPath: string;
+  private data: RegistryData | undefined;
 
   constructor(registryPath: string) {
     this.registryPath = registryPath;
+  }
+
+  /**
+   * Initializes the registry by loading data from disk.
+   */
+  async initialize(): Promise<void> {
+    if (this.data) {
+      return;
+    }
+
+    if (!existsSync(this.registryPath)) {
+      this.data = { projects: {} };
+      return;
+    }
+
+    try {
+      const content = await fs.readFile(this.registryPath, 'utf8');
+      this.data = JSON.parse(content);
+    } catch (e) {
+      debugLogger.debug('Failed to load registry: ', e);
+      // If the registry is corrupted, we'll start fresh to avoid blocking the CLI
+      this.data = { projects: {} };
+    }
   }
 
   private normalizePath(projectPath: string): string {
@@ -32,33 +57,22 @@ export class ProjectRegistry {
     return resolved;
   }
 
-  private load(): RegistryData {
-    if (!fs.existsSync(this.registryPath)) {
-      return { projects: {} };
+  private async save(): Promise<void> {
+    if (!this.data) {
+      return;
     }
-    try {
-      const content = fs.readFileSync(this.registryPath, 'utf8');
-      return JSON.parse(content);
-    } catch (e) {
-      debugLogger.debug('Failed to load registry: ', e);
-      // If the registry is corrupted, we'll start fresh to avoid blocking the CLI
-      return { projects: {} };
-    }
-  }
 
-  private save(data: RegistryData): void {
     const dir = path.dirname(this.registryPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    if (!existsSync(dir)) {
+      await fs.mkdir(dir, { recursive: true });
     }
+
     try {
-      const content = JSON.stringify(data, null, 2);
+      const content = JSON.stringify(this.data, null, 2);
       const tmpPath = `${this.registryPath}.tmp`;
-      fs.writeFileSync(tmpPath, content, 'utf8');
-      fs.renameSync(tmpPath, this.registryPath);
+      await fs.writeFile(tmpPath, content, 'utf8');
+      await fs.rename(tmpPath, this.registryPath);
     } catch (error) {
-      // If we can't save the registry, we'll just log it to stderr
-      // but continue so we don't crash the session
       debugLogger.debug(
         `Failed to save project registry to ${this.registryPath}:`,
         error,
@@ -70,17 +84,23 @@ export class ProjectRegistry {
    * Returns a short identifier for the given project path.
    * If the project is not already in the registry, a new identifier is generated and saved.
    */
-  getShortId(projectPath: string): string {
-    const data = this.load();
-    const normalizedPath = this.normalizePath(projectPath);
-
-    if (data.projects[normalizedPath]) {
-      return data.projects[normalizedPath];
+  async getShortId(projectPath: string): Promise<string> {
+    if (!this.data) {
+      throw new Error('ProjectRegistry must be initialized before use');
     }
 
-    const shortId = this.generateUniqueShortId(normalizedPath, data.projects);
-    data.projects[normalizedPath] = shortId;
-    this.save(data);
+    const normalizedPath = this.normalizePath(projectPath);
+
+    if (this.data.projects[normalizedPath]) {
+      return this.data.projects[normalizedPath];
+    }
+
+    const shortId = this.generateUniqueShortId(
+      normalizedPath,
+      this.data.projects,
+    );
+    this.data.projects[normalizedPath] = shortId;
+    await this.save();
     return shortId;
   }
 

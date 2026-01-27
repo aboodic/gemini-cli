@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -18,6 +18,59 @@ vi.mock('fs', async (importOriginal) => {
 
 import { Storage } from './storage.js';
 import { GEMINI_DIR, homedir } from '../utils/paths.js';
+import { ProjectRegistry } from './projectRegistry.js';
+import { StorageMigration } from './storageMigration.js';
+
+vi.mock('./projectRegistry.js');
+vi.mock('./storageMigration.js');
+
+describe('Storage – initialize', () => {
+  const projectRoot = '/tmp/project';
+  let storage: Storage;
+
+  beforeEach(() => {
+    storage = new Storage(projectRoot);
+    vi.clearAllMocks();
+
+    // Mock ProjectRegistry to return a predictable shortId
+    vi.mocked(ProjectRegistry).prototype.initialize = vi
+      .fn()
+      .mockResolvedValue(undefined);
+    vi.mocked(ProjectRegistry).prototype.getShortId = vi
+      .fn()
+      .mockResolvedValue('project-slug');
+
+    // Mock StorageMigration.migrateDirectory
+    vi.mocked(StorageMigration.migrateDirectory).mockResolvedValue(undefined);
+  });
+
+  it('sets up the registry and performs migration', async () => {
+    await storage.initialize();
+
+    // Verify registry initialization
+    expect(ProjectRegistry).toHaveBeenCalled();
+    expect(vi.mocked(ProjectRegistry).prototype.initialize).toHaveBeenCalled();
+    expect(
+      vi.mocked(ProjectRegistry).prototype.getShortId,
+    ).toHaveBeenCalledWith(projectRoot);
+
+    // Verify migration calls
+    const shortId = 'project-slug';
+    // We can't easily get the hash here without repeating logic, but we can verify it's called twice
+    expect(StorageMigration.migrateDirectory).toHaveBeenCalledTimes(2);
+
+    // Verify identifier is set by checking a path
+    expect(storage.getProjectTempDir()).toContain(shortId);
+  });
+
+  it('only initializes once', async () => {
+    await storage.initialize();
+    await storage.initialize();
+
+    expect(ProjectRegistry).toHaveBeenCalledTimes(1);
+    expect(StorageMigration.migrateDirectory).toHaveBeenCalledTimes(2); // Still 2 calls from the first initialize
+  });
+});
 
 vi.mock('../utils/paths.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../utils/paths.js')>();
@@ -64,7 +117,8 @@ describe('Storage – additional helpers', () => {
     expect(Storage.getUserCommandsDir()).toBe(expected);
   });
 
-  it('getProjectCommandsDir returns project/.gemini/commands', () => {
+  it('getProjectCommandsDir returns project/.gemini/commands', async () => {
+    await storage.initialize();
     const expected = path.join(projectRoot, GEMINI_DIR, 'commands');
     expect(storage.getProjectCommandsDir()).toBe(expected);
   });
@@ -74,7 +128,8 @@ describe('Storage – additional helpers', () => {
     expect(Storage.getUserSkillsDir()).toBe(expected);
   });
 
-  it('getProjectSkillsDir returns project/.gemini/skills', () => {
+  it('getProjectSkillsDir returns project/.gemini/skills', async () => {
+    await storage.initialize();
     const expected = path.join(projectRoot, GEMINI_DIR, 'skills');
     expect(storage.getProjectSkillsDir()).toBe(expected);
   });
@@ -84,7 +139,8 @@ describe('Storage – additional helpers', () => {
     expect(Storage.getUserAgentsDir()).toBe(expected);
   });
 
-  it('getProjectAgentsDir returns project/.gemini/agents', () => {
+  it('getProjectAgentsDir returns project/.gemini/agents', async () => {
+    await storage.initialize();
     const expected = path.join(projectRoot, GEMINI_DIR, 'agents');
     expect(storage.getProjectAgentsDir()).toBe(expected);
   });
@@ -103,7 +159,8 @@ describe('Storage – additional helpers', () => {
     expect(Storage.getGlobalBinDir()).toBe(expected);
   });
 
-  it('getProjectTempPlansDir returns ~/.gemini/tmp/<identifier>/plans', () => {
+  it('getProjectTempPlansDir returns ~/.gemini/tmp/<identifier>/plans', async () => {
+    await storage.initialize();
     const tempDir = storage.getProjectTempDir();
     const expected = path.join(tempDir, 'plans');
     expect(storage.getProjectTempPlansDir()).toBe(expected);

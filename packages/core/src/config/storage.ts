@@ -10,7 +10,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { GEMINI_DIR, homedir } from '../utils/paths.js';
 import { ProjectRegistry } from './projectRegistry.js';
-import { debugLogger } from 'src/utils/debugLogger.js';
+import { StorageMigration } from './storageMigration.js';
 
 export const GOOGLE_ACCOUNTS_FILENAME = 'google_accounts.json';
 export const OAUTH_FILE = 'oauth_creds.json';
@@ -150,8 +150,20 @@ export class Storage {
   }
 
   private getProjectIdentifier(): string {
+    if (!this.projectIdentifier) {
+      throw new Error(
+        'Storage must be initialized before accessing project-specific paths.',
+      );
+    }
+    return this.projectIdentifier;
+  }
+
+  /**
+   * Initializes storage by setting up the project registry and performing migrations.
+   */
+  async initialize(): Promise<void> {
     if (this.projectIdentifier) {
-      return this.projectIdentifier;
+      return;
     }
 
     const registryPath = path.join(
@@ -159,44 +171,32 @@ export class Storage {
       'projects.json',
     );
     const registry = new ProjectRegistry(registryPath);
-    const shortId = registry.getShortId(this.getProjectRoot());
+    await registry.initialize();
 
-    // Migration logic to move old hash-based directories to new slug-based directories
+    const shortId = await registry.getShortId(this.getProjectRoot());
+    this.projectIdentifier = shortId;
+
+    await this.performMigration();
+  }
+
+  /**
+   * Performs migration of legacy hash-based directories to the new slug-based format.
+   * This is called internally by initialize().
+   */
+  private async performMigration(): Promise<void> {
+    const shortId = this.getProjectIdentifier();
     const oldHash = this.getFilePathHash(this.getProjectRoot());
 
     // Migrate Temp Dir
     const newTempDir = path.join(Storage.getGlobalTempDir(), shortId);
-    if (!fs.existsSync(newTempDir)) {
-      const oldTempDir = path.join(Storage.getGlobalTempDir(), oldHash);
-      if (fs.existsSync(oldTempDir)) {
-        try {
-          fs.renameSync(oldTempDir, newTempDir);
-        } catch (e) {
-          debugLogger.debug('Failed to migrate temp directories: ', e);
-        }
-      }
-    }
+    const oldTempDir = path.join(Storage.getGlobalTempDir(), oldHash);
+    await StorageMigration.migrateDirectory(oldTempDir, newTempDir);
 
     // Migrate History Dir
     const historyDir = path.join(Storage.getGlobalGeminiDir(), 'history');
     const newHistoryDir = path.join(historyDir, shortId);
-    if (!fs.existsSync(newHistoryDir)) {
-      const oldHistoryDir = path.join(historyDir, oldHash);
-      if (fs.existsSync(oldHistoryDir)) {
-        try {
-          // Ensure parent directory exists for history
-          if (!fs.existsSync(historyDir)) {
-            fs.mkdirSync(historyDir, { recursive: true });
-          }
-          fs.renameSync(oldHistoryDir, newHistoryDir);
-        } catch (e) {
-          debugLogger.debug('Failed to migrate temp directories: ', e);
-        }
-      }
-    }
-
-    this.projectIdentifier = shortId;
-    return shortId;
+    const oldHistoryDir = path.join(historyDir, oldHash);
+    await StorageMigration.migrateDirectory(oldHistoryDir, newHistoryDir);
   }
 
   getHistoryDir(): string {

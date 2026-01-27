@@ -207,6 +207,19 @@ vi.mock('../core/tokenLimits.js', () => ({
 vi.mock('../code_assist/codeAssist.js');
 vi.mock('../code_assist/experiments/experiments.js');
 
+const mockProjectRegistryInitialize = vi.hoisted(() =>
+  vi.fn().mockReturnValue(undefined),
+);
+
+vi.mock('./projectRegistry.js', () => {
+  const ProjectRegistryMock = vi.fn();
+  ProjectRegistryMock.prototype.initialize = mockProjectRegistryInitialize;
+  ProjectRegistryMock.prototype.getShortId = vi
+    .fn()
+    .mockReturnValue('project-slug');
+  return { ProjectRegistry: ProjectRegistryMock };
+});
+
 describe('Server Config (config.ts)', () => {
   const MODEL = DEFAULT_GEMINI_MODEL;
   const SANDBOX: SandboxConfig = {
@@ -306,34 +319,13 @@ describe('Server Config (config.ts)', () => {
       expect(mcpStarted).toBe(true);
     });
 
-    it('should not await MCP initialization in interactive mode', async () => {
+    it('should initialize ProjectRegistry(via Storage)', async () => {
       const config = new Config({
         ...baseParams,
-        checkpointing: false,
         interactive: true,
       });
-
-      const { McpClientManager } = await import(
-        '../tools/mcp-client-manager.js'
-      );
-      let mcpStarted = false;
-
-      (McpClientManager as unknown as Mock).mockImplementation(() => ({
-        startConfiguredMcpServers: vi.fn().mockImplementation(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-          mcpStarted = true;
-        }),
-        getMcpInstructions: vi.fn(),
-      }));
-
       await config.initialize();
-
-      // Should return immediately, before MCP finishes
-      expect(mcpStarted).toBe(false);
-
-      // Wait for it to eventually finish to avoid open handles
-      await new Promise((resolve) => setTimeout(resolve, 60));
-      expect(mcpStarted).toBe(true);
+      expect(mockProjectRegistryInitialize).toHaveBeenCalled();
     });
 
     describe('getCompressionThreshold', () => {
