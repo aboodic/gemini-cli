@@ -174,6 +174,7 @@ export class Storage {
     await registry.initialize();
 
     const shortId = await registry.getShortId(this.getProjectRoot());
+    console.log(shortId);
     this.projectIdentifier = shortId;
 
     await this.performMigration();

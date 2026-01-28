@@ -81,6 +81,15 @@ vi.mock('../utils/debugLogger.js', () => ({
   debugLogger: hoistedMockDebugLogger,
 }));
 
+const hoistedMockProjectRegistry = vi.hoisted(() => vi.fn());
+vi.mock('../config/projectRegistry.js', () => {
+  hoistedMockProjectRegistry.mockImplementation(() => ({
+    initialize: vi.fn(),
+    getShortId: vi.fn().mockReturnValue('project-slug'),
+  }));
+  return {ProjectRegistry: hoistedMockProjectRegistry };
+});
+
 describe('GitService', () => {
   let testRootDir: string;
   let projectRoot: string;
@@ -131,7 +140,12 @@ describe('GitService', () => {
     hoistedMockCommit.mockResolvedValue({
       commit: 'initial',
     });
+    hoistedMockProjectRegistry.mockImplementation(() => ({
+      initialize: vi.fn(),
+      getShortId: vi.fn().mockReturnValue('project-slug'),
+    }));
     storage = new Storage(projectRoot);
+    await storage.initialize();
   });
 
   afterEach(async () => {

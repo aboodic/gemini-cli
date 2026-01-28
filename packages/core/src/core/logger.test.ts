@@ -69,12 +69,32 @@ vi.mock('../utils/session.js', () => ({
   sessionId: 'test-session-id',
 }));
 
+// vi.mock('../config/projectRegistry.ts', () => ({
+//   ProjectRegistry: vi.fn().mockImplementation(() => ({
+//     initialize: vi.fn().mockReturnValue(undefined),
+//     getShortId: vi.fn().mockReturnValue('project-slug'),
+//   }))
+// }))
+
+const hoistedMockProjectRegistry = vi.hoisted(() => vi.fn());
+vi.mock('../config/projectRegistry.js', () => {
+  hoistedMockProjectRegistry.mockImplementation(() => ({
+    initialize: vi.fn(),
+    getShortId: vi.fn().mockReturnValue('project-slug'),
+  }));
+  return {ProjectRegistry: hoistedMockProjectRegistry };
+});
+
 describe('Logger', () => {
   let logger: Logger;
   const testSessionId = 'test-session-id';
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    hoistedMockProjectRegistry.mockImplementation(() => ({
+      initialize: vi.fn(),
+      getShortId: vi.fn().mockReturnValue('project-slug'),
+    }));
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-01-01T12:00:00.000Z'));
     // Clean up before the test
