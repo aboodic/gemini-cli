@@ -17,6 +17,7 @@ export const TOOL_PROTECTION_THRESHOLD = 50_000;
 export const HYSTERESIS_THRESHOLD = 30_000;
 
 export const SMART_TRUNCATION_TOKENS = 5_000;
+export const MIN_SAVINGS_MULTIPLIER = 2.5;
 
 export const OBSERVATION_DIR = 'observations';
 
@@ -67,21 +68,25 @@ export class ObservationMaskingService {
         }
 
         const partTokens = estimateTokenCountSync([part]);
+        const isMaskable =
+          partTokens > SMART_TRUNCATION_TOKENS * MIN_SAVINGS_MULTIPLIER;
 
         if (!protectionBoundaryReached) {
           cumulativeToolTokens += partTokens;
           if (cumulativeToolTokens > TOOL_PROTECTION_THRESHOLD) {
             protectionBoundaryReached = true;
-            // The part that crossed the boundary is prunable.
-            totalPrunableTokens += partTokens;
-            prunableParts.push({
-              contentIndex: i,
-              partIndex: j,
-              tokens: partTokens,
-              content: observationContent,
-            });
+            // The part that crossed the boundary is prunable IF it's large enough.
+            if (isMaskable) {
+              totalPrunableTokens += partTokens;
+              prunableParts.push({
+                contentIndex: i,
+                partIndex: j,
+                tokens: partTokens,
+                content: observationContent,
+              });
+            }
           }
-        } else {
+        } else if (isMaskable) {
           totalPrunableTokens += partTokens;
           prunableParts.push({
             contentIndex: i,
@@ -184,6 +189,10 @@ export class ObservationMaskingService {
       tokensSaved: actualTokensSaved,
     };
 
+    if (actualTokensSaved <= 0) {
+      return result;
+    }
+
     logObservationMasking(
       config,
       new ObservationMaskingEvent({
@@ -238,7 +247,7 @@ export class ObservationMaskingService {
     // We use a safe character proxy (4 chars per token) to slice.
     const charLimit = SMART_TRUNCATION_TOKENS * 4;
 
-    if (content.length <= charLimit * 2.5) {
+    if (totalTokens <= SMART_TRUNCATION_TOKENS * MIN_SAVINGS_MULTIPLIER) {
       return content; // Too small to mask meaningfully
     }
 

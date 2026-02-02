@@ -176,4 +176,27 @@ describe('ObservationMaskingService', () => {
 
     expect(result.maskedCount).toBe(0);
   });
+
+  it('should not mask if prunable tokens are collectively > 30k but all are individually below maskable threshold', async () => {
+    // 5 parts of 10k tokens each = 50k total.
+    // 50k > 30k hysteresis, but individual parts (10k) < 12.5k maskable threshold.
+    const history: Content[] = Array.from({ length: 11 }, (_, i) => ({
+      role: 'user',
+      parts: [
+        {
+          functionResponse: {
+            name: `tool${i}`,
+            response: { output: 'A'.repeat(10000) },
+          },
+        },
+      ],
+    }));
+
+    mockedEstimateTokenCountSync.mockReturnValue(10000);
+
+    const result = await service.mask(history, mockConfig);
+
+    expect(result.maskedCount).toBe(0);
+    expect(result.tokensSaved).toBe(0);
+  });
 });
