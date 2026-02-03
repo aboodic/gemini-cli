@@ -267,7 +267,13 @@ class GrepToolInvocation extends BaseToolInvocation<
       const matchCount = allMatches.length;
       const matchTerm = matchCount === 1 ? 'match' : 'matches';
 
-      let llmContent = `Found ${matchCount} ${matchTerm} for pattern "${this.params.pattern}" ${searchLocationDescription}${this.params.include ? ` (filter: "${this.params.include}")` : ''}${wasTruncated ? ` (results limited to ${totalMaxMatches} matches for performance)` : ''}:\n---\n`;
+      let llmContent = `Found ${matchCount} ${matchTerm} for pattern "${this.params.pattern}" ${searchLocationDescription}${this.params.include ? ` (filter: "${this.params.include}")` : ''}`;
+
+      if (wasTruncated) {
+        llmContent += ` (results limited to ${totalMaxMatches} matches for performance)`;
+      }
+
+      llmContent += `:\n---\n`;
 
       for (const filePath in matchesByFile) {
         llmContent += `File: ${filePath}
