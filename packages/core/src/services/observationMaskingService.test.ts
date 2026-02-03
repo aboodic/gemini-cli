@@ -199,4 +199,231 @@ describe('ObservationMaskingService', () => {
     expect(result.maskedCount).toBe(0);
     expect(result.tokensSaved).toBe(0);
   });
+
+  it('should handle empty history', async () => {
+    const result = await service.mask([], mockConfig);
+    expect(result.maskedCount).toBe(0);
+    expect(result.newHistory).toEqual([]);
+    expect(result.tokensSaved).toBe(0);
+  });
+
+  it('should skip non-tool parts', async () => {
+    const history: Content[] = [
+      {
+        role: 'user',
+        parts: [{ text: 'some text'.repeat(10000) }],
+      },
+    ];
+    mockedEstimateTokenCountSync.mockReturnValue(10000);
+
+    const result = await service.mask(history, mockConfig);
+    expect(result.maskedCount).toBe(0);
+    expect(result.newHistory).toEqual(history);
+  });
+
+  it('should skip already masked content', async () => {
+    const history: Content[] = [
+      {
+        role: 'user',
+        parts: [
+          {
+            functionResponse: {
+              name: 'tool1',
+              response: {
+                output: '[Observation Masked]\nsome content'.repeat(10000),
+              },
+            },
+          },
+        ],
+      },
+    ];
+    mockedEstimateTokenCountSync.mockReturnValue(20000);
+
+    const result = await service.mask(history, mockConfig);
+    expect(result.maskedCount).toBe(0);
+  });
+
+  it('should handle different response keys (result, stdout, content, string)', async () => {
+    const history: Content[] = [
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 't1',
+              response: { result: 'A\n'.repeat(30000) },
+            },
+          },
+        ],
+      },
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 't2',
+              response: { stdout: 'B\n'.repeat(30000) },
+            },
+          },
+        ],
+      },
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 't3',
+              response: { content: 'C\n'.repeat(30000) },
+            },
+          },
+        ],
+      },
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 't4',
+              response: 'D\n'.repeat(30000) as unknown as Record<
+                string,
+                unknown
+              >,
+            },
+          },
+        ],
+      },
+      // Protected part
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 't5',
+              response: { output: 'E\n'.repeat(30000) },
+            },
+          },
+        ],
+      },
+    ];
+
+    mockedEstimateTokenCountSync.mockImplementation((parts: Part[]) => {
+      const fr = parts[0].functionResponse?.response as unknown;
+      if (typeof fr === 'string') return fr.length;
+      const resp = fr as Record<string, string>;
+      const content =
+        resp['output'] || resp['result'] || resp['stdout'] || resp['content'];
+      return content?.length || 0;
+    });
+
+    const result = await service.mask(history, mockConfig);
+
+    expect(result.maskedCount).toBe(5);
+
+    const r1 = result.newHistory[0].parts![0].functionResponse!
+      .response as Record<string, unknown>;
+    expect(r1['result'] as string).toContain('[Observation Masked]');
+
+    const r2 = result.newHistory[1].parts![0].functionResponse!
+      .response as Record<string, unknown>;
+    expect(r2['stdout'] as string).toContain('[Observation Masked]');
+
+    const r3 = result.newHistory[2].parts![0].functionResponse!
+      .response as Record<string, unknown>;
+    expect(r3['content'] as string).toContain('[Observation Masked]');
+
+    const r4 = result.newHistory[3].parts![0].functionResponse!.response;
+    expect(typeof r4).toBe('string');
+    expect(r4 as unknown as string).toContain('[Observation Masked]');
+  });
+
+  it('should verify masked snippet content (head and tail truncation)', async () => {
+    const head = 'START_OF_DATA';
+    const mid = 'MIDDLE_OF_DATA'.repeat(10000);
+    const tail = 'END_OF_DATA';
+    const content = head + mid + tail;
+
+    const history: Content[] = [
+      {
+        role: 'model',
+        parts: [
+          { functionResponse: { name: 't1', response: { output: content } } },
+        ],
+      },
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: { name: 't2', response: { output: 'protected' } },
+          },
+        ],
+      },
+    ];
+
+    mockedEstimateTokenCountSync.mockImplementation((parts: Part[]) => {
+      const resp = parts[0].functionResponse?.response as Record<
+        string,
+        unknown
+      >;
+      const c = resp['output'] as string;
+      if (c === 'protected') return 50000;
+      return 100000;
+    });
+
+    const result = await service.mask(history, mockConfig);
+    expect(result.maskedCount).toBe(1);
+
+    const maskedResponse = result.newHistory[0].parts![0].functionResponse!
+      .response as Record<string, unknown>;
+    const maskedOutput = maskedResponse['output'] as string;
+    expect(maskedOutput).toContain('START_OF_DATA');
+    expect(maskedOutput).toContain('END_OF_DATA');
+    expect(maskedOutput).toContain('[TRUNCATED');
+    expect(maskedOutput).toContain('<observation_masked_guidance');
+  });
+
+  it('should use callId in filename if available', async () => {
+    const history: Content[] = [
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 'my_tool',
+              response: {
+                output: 'A\n'.repeat(40000),
+                callId: 'custom-id-123',
+              },
+            },
+          },
+        ],
+      },
+      {
+        role: 'model',
+        parts: [
+          {
+            functionResponse: {
+              name: 'p',
+              response: { output: 'p'.repeat(50000) },
+            },
+          },
+        ],
+      },
+    ];
+
+    mockedEstimateTokenCountSync.mockImplementation((parts: Part[]) => {
+      const resp = parts[0].functionResponse?.response as Record<
+        string,
+        unknown
+      >;
+      return (resp['output'] as string).length;
+    });
+
+    await service.mask(history, mockConfig);
+
+    expect(fsPromises.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('my_tool_custom-id-123_'),
+      expect.any(String),
+      'utf-8',
+    );
+  });
 });

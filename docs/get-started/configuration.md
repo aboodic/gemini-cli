@@ -855,7 +855,7 @@ their corresponding top-level category object in your `settings.json` file.
 
 - **`experimental.observationMaskingEnabled`** (boolean):
   - **Description:** Enables observation masking for tool outputs beyond the
-    context window limits.
+    tool protection threshold (50,000 tokens).
   - **Default:** `false`
   - **Requires restart:** Yes
 
