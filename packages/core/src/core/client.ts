@@ -1067,6 +1067,9 @@ export class GeminiClient {
    * Masks bulky tool outputs (observations) to save context window space.
    */
   private async tryMaskObservations(): Promise<void> {
+    if (!this.config.getObservationMaskingEnabled()) {
+      return;
+    }
     const result = await this.observationMaskingService.mask(
       this.getHistory(),
       this.config,

@@ -853,6 +853,12 @@ their corresponding top-level category object in your `settings.json` file.
 
 #### `experimental`
 
+- **`experimental.observationMaskingEnabled`** (boolean):
+  - **Description:** Enables observation masking for tool outputs beyond the
+    context window limits.
+  - **Default:** `false`
+  - **Requires restart:** Yes
+
 - **`experimental.enableAgents`** (boolean):
   - **Description:** Enable local and remote subagents. Warning: Experimental
     feature, uses YOLO mode for subagents

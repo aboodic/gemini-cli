@@ -457,6 +457,7 @@ export interface ConfigParameters {
   disabledSkills?: string[];
   adminSkillsEnabled?: boolean;
   experimentalJitContext?: boolean;
+  observationMaskingEnabled?: boolean;
   disableLLMCorrection?: boolean;
   plan?: boolean;
   onModelChange?: (model: string) => void;
@@ -619,6 +620,7 @@ export class Config {
   private readonly adminSkillsEnabled: boolean;
 
   private readonly experimentalJitContext: boolean;
+  private readonly observationMaskingEnabled: boolean;
   private readonly disableLLMCorrection: boolean;
   private readonly planEnabled: boolean;
   private contextManager?: ContextManager;
@@ -713,6 +715,7 @@ export class Config {
     this.modelAvailabilityService = new ModelAvailabilityService();
     this.previewFeatures = params.previewFeatures ?? undefined;
     this.experimentalJitContext = params.experimentalJitContext ?? false;
+    this.observationMaskingEnabled = params.observationMaskingEnabled ?? false;
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
     this.experimentalZedIntegration =
       params.experimentalZedIntegration ?? false;
@@ -1435,6 +1438,10 @@ export class Config {
 
   isJitContextEnabled(): boolean {
     return this.experimentalJitContext;
+  }
+
+  getObservationMaskingEnabled(): boolean {
+    return this.observationMaskingEnabled;
   }
 
   getGeminiMdFileCount(): number {

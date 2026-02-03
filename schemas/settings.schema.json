@@ -1428,6 +1428,13 @@
       "default": {},
       "type": "object",
       "properties": {
+        "observationMaskingEnabled": {
+          "title": "Observation Masking",
+          "description": "Enables observation masking for tool outputs beyond the tool protection threshold (50,000 tokens).",
+          "markdownDescription": "Enables observation masking for tool outputs beyond the tool protection threshold (50,000 tokens).\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `false`",
+          "default": false,
+          "type": "boolean"
+        },
         "enableAgents": {
           "title": "Enable Agents",
           "description": "Enable local and remote subagents. Warning: Experimental feature, uses YOLO mode for subagents",

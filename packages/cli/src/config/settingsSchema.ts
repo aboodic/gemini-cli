@@ -1462,6 +1462,16 @@ const SETTINGS_SCHEMA = {
     description: 'Setting to enable experimental features',
     showInDialog: false,
     properties: {
+      observationMaskingEnabled: {
+        type: 'boolean',
+        label: 'Observation Masking',
+        category: 'Experimental',
+        requiresRestart: true,
+        default: false,
+        description:
+          'Enables observation masking for tool outputs beyond the tool protection threshold (50,000 tokens).',
+        showInDialog: false,
+      },
       enableAgents: {
         type: 'boolean',
         label: 'Enable Agents',
