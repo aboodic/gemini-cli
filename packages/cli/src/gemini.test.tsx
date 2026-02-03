@@ -156,6 +156,7 @@ vi.mock('./config/config.js', () => ({
     getSandbox: vi.fn(() => false),
     getQuestion: vi.fn(() => ''),
     isInteractive: () => false,
+    getAllowedTools: vi.fn(),
     setTerminalBackground: vi.fn(),
     storage: {
       getProjectTempDir: vi.fn().mockReturnValue('/tmp/gemini-test'),
@@ -425,6 +426,7 @@ describe('gemini.tsx main function kitty protocol', () => {
     const { loadSettings } = await import('./config/settings.js');
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => true,
+      getAllowedTools: vi.fn(),
       getQuestion: () => '',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -544,6 +546,7 @@ describe('gemini.tsx main function kitty protocol', () => {
 
     const mockConfig = {
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => '',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -634,6 +637,7 @@ describe('gemini.tsx main function kitty protocol', () => {
 
     const mockConfig = {
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => '',
       getSandbox: () => true,
       getDebugMode: () => false,
@@ -750,6 +754,7 @@ describe('gemini.tsx main function kitty protocol', () => {
     } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => 'test',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -839,6 +844,7 @@ describe('gemini.tsx main function kitty protocol', () => {
     } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => true,
+      getAllowedTools: vi.fn(),
       getQuestion: () => '',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -925,6 +931,7 @@ describe('gemini.tsx main function kitty protocol', () => {
     } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => 'test',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -1005,6 +1012,7 @@ describe('gemini.tsx main function kitty protocol', () => {
     } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => 'test-question',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -1102,7 +1110,9 @@ describe('gemini.tsx main function exit codes', () => {
       './config/config.js'
     );
     const { loadSettings } = await import('./config/settings.js');
-    vi.mocked(loadCliConfig).mockResolvedValue({} as Config);
+    vi.mocked(loadCliConfig).mockResolvedValue({
+      getAllowedTools: vi.fn(),
+    } as unknown as Config);
     vi.mocked(loadSettings).mockReturnValue(
       createMockSettings({
         merged: { security: { auth: {} }, ui: {} },
@@ -1137,6 +1147,7 @@ describe('gemini.tsx main function exit codes', () => {
       refreshAuth: vi.fn().mockRejectedValue(new Error('Auth failed')),
       getRemoteAdminSettings: vi.fn().mockReturnValue(undefined),
       isInteractive: vi.fn().mockReturnValue(true),
+      getAllowedTools: vi.fn(),
     } as unknown as Config);
     vi.mocked(loadSettings).mockReturnValue(
       createMockSettings({
@@ -1167,6 +1178,7 @@ describe('gemini.tsx main function exit codes', () => {
 
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => 'test',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -1240,6 +1252,7 @@ describe('gemini.tsx main function exit codes', () => {
 
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => '',
       getSandbox: () => false,
       getDebugMode: () => false,
@@ -1310,6 +1323,7 @@ describe('gemini.tsx main function exit codes', () => {
 
     vi.mocked(loadCliConfig).mockResolvedValue({
       isInteractive: () => false,
+      getAllowedTools: vi.fn(),
       getQuestion: () => 'test prompt',
       getSandbox: () => false,
       getDebugMode: () => false,
