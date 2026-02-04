@@ -718,7 +718,7 @@ export class Config {
     debugLogger.log(
       `Observation masking enabled: ${params.observationMaskingEnabled}`,
     );
-    this.observationMaskingEnabled = params.observationMaskingEnabled ?? false;
+    this.observationMaskingEnabled = params.observationMaskingEnabled ?? true;
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
     this.experimentalZedIntegration =
       params.experimentalZedIntegration ?? false;

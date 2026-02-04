@@ -764,7 +764,8 @@ export async function loadCliConfig(
     skillsSupport: settings.skills?.enabled ?? true,
     disabledSkills: settings.skills?.disabled,
     experimentalJitContext: settings.experimental?.jitContext,
-    observationMaskingEnabled: settings.experimental?.observationMaskingEnabled,
+    observationMaskingEnabled:
+      settings.experimental?.observationMaskingEnabled || true,
     noBrowser: !!process.env['NO_BROWSER'],
     summarizeToolOutput: settings.model?.summarizeToolOutput,
     ideMode,
