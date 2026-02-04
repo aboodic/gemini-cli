@@ -11,13 +11,16 @@ import { estimateTokenCountSync } from '../utils/tokenCalculation.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import type { Config } from '../config/config.js';
 import { logObservationMasking } from '../telemetry/loggers.js';
+import {
+  SHELL_TOOL_NAME,
+  GREP_TOOL_NAME,
+  READ_FILE_TOOL_NAME,
+} from '../tools/tool-names.js';
 import { ObservationMaskingEvent } from '../telemetry/types.js';
 
 export const TOOL_PROTECTION_THRESHOLD = 50_000;
 export const HYSTERESIS_THRESHOLD = 30_000;
-
-export const SMART_TRUNCATION_TOKENS = 5_000;
-export const MIN_SAVINGS_MULTIPLIER = 2.5;
+export const PROTECT_LATEST_TURN = true;
 
 export const OBSERVATION_DIR = 'observations';
 
@@ -29,10 +32,10 @@ export interface MaskingResult {
 
 /**
  * Service to manage context window by masking bulky tool outputs (Observation Masking).
- * Follows the Backward FIFO algorithm:
- * 1. Protect newest 50k tool tokens.
- * 2. Identify prunable tool tokens beyond 50k.
- * 3. Trigger masking if prunable tokens > 30k.
+ * Follows a Hybrid Backward Scanned FIFO algorithm:
+ * 1. Protect newest 50k tool tokens (optionally skipping the entire latest turn).
+ * 2. Identify ALL tool outputs beyond the protection window for global aggregation.
+ * 3. Trigger masking if the total prunable tokens exceed 30k.
  */
 export class ObservationMaskingService {
   async mask(history: Content[], config: Config): Promise<MaskingResult> {
@@ -49,10 +52,17 @@ export class ObservationMaskingService {
       partIndex: number;
       tokens: number;
       content: string;
+      originalPart: Part;
     }> = [];
 
+    // Decide where to start scanning.
+    // If PROTECT_LATEST_TURN is true, we skip the most recent message (index history.length - 1).
+    const scanStartIdx = PROTECT_LATEST_TURN
+      ? history.length - 2
+      : history.length - 1;
+
     // Step 1: Backward scan to identify prunable tool outputs
-    for (let i = history.length - 1; i >= 0; i--) {
+    for (let i = scanStartIdx; i >= 0; i--) {
       const content = history[i];
       const parts = content.parts || [];
 
@@ -68,31 +78,29 @@ export class ObservationMaskingService {
         }
 
         const partTokens = estimateTokenCountSync([part]);
-        const isMaskable =
-          partTokens > SMART_TRUNCATION_TOKENS * MIN_SAVINGS_MULTIPLIER;
 
         if (!protectionBoundaryReached) {
           cumulativeToolTokens += partTokens;
           if (cumulativeToolTokens > TOOL_PROTECTION_THRESHOLD) {
             protectionBoundaryReached = true;
-            // The part that crossed the boundary is prunable IF it's large enough.
-            if (isMaskable) {
-              totalPrunableTokens += partTokens;
-              prunableParts.push({
-                contentIndex: i,
-                partIndex: j,
-                tokens: partTokens,
-                content: observationContent,
-              });
-            }
+            // The part that crossed the boundary is prunable.
+            totalPrunableTokens += partTokens;
+            prunableParts.push({
+              contentIndex: i,
+              partIndex: j,
+              tokens: partTokens,
+              content: observationContent,
+              originalPart: part,
+            });
           }
-        } else if (isMaskable) {
+        } else {
           totalPrunableTokens += partTokens;
           prunableParts.push({
             contentIndex: i,
             partIndex: j,
             tokens: partTokens,
             content: observationContent,
+            originalPart: part,
           });
         }
       }
@@ -123,11 +131,8 @@ export class ObservationMaskingService {
 
       if (!part.functionResponse) continue;
 
-      const toolName = part.functionResponse.name;
-      // Use callId to avoid collisions if possible
-      const response =
-        (part.functionResponse.response as Record<string, unknown>) || {};
-      const callId = response['callId']?.toString() || Date.now().toString();
+      const toolName = part.functionResponse.name || 'unknown_tool';
+      const callId = part.functionResponse.id || Date.now().toString();
       const fileName = `${toolName}_${callId}_${Math.random()
         .toString(36)
         .substring(7)}.txt`;
@@ -135,42 +140,46 @@ export class ObservationMaskingService {
 
       await fsPromises.writeFile(filePath, content, 'utf-8');
 
-      const maskedSnippet = this.formatMaskedSnippet(
-        content,
-        filePath,
-        toolName ?? 'unknown_tool',
-        tokens,
-      );
-
-      // Create new part with masked content
-      const newParts = [...contentRecord.parts!];
       const originalResponse =
         (part.functionResponse.response as Record<string, unknown>) || {};
 
-      // Determine which key to replace (output, result, stdout, or the string itself)
-      let newResponse: Record<string, unknown> | string;
-      if (typeof originalResponse === 'string') {
-        newResponse = maskedSnippet;
+      const totalLines = content.split('\n').length;
+      const fileSizeMB = (
+        Buffer.byteLength(content, 'utf8') /
+        1024 /
+        1024
+      ).toFixed(2);
+
+      let preview = '';
+      if (toolName === SHELL_TOOL_NAME) {
+        preview = this.formatShellPreview(originalResponse);
       } else {
-        newResponse = { ...originalResponse };
-        if ('output' in originalResponse) newResponse['output'] = maskedSnippet;
-        else if ('result' in originalResponse)
-          newResponse['result'] = maskedSnippet;
-        else if ('stdout' in originalResponse)
-          newResponse['stdout'] = maskedSnippet;
-        else if ('content' in originalResponse)
-          newResponse['content'] = maskedSnippet;
-        else {
-          // Default to string if we can't find a key, though getObservationContent usually finds one
-          newResponse['output'] = maskedSnippet;
+        // General tools: Head + Tail preview (250 chars each)
+        if (content.length > 500) {
+          preview = `${content.slice(0, 250)}\n... [TRUNCATED] ...\n${content.slice(-250)}`;
+        } else {
+          preview = content;
         }
       }
 
+      const maskedSnippet = this.formatMaskedSnippet({
+        toolName,
+        filePath,
+        fileSizeMB,
+        totalLines,
+        tokens,
+        preview,
+      });
+
+      // Create new part with masked content
+      const newParts = [...contentRecord.parts!];
+
+      // Replace the entire response with the masked snippet to guarantee full savings
       newParts[partIndex] = {
         ...part,
         functionResponse: {
           ...part.functionResponse,
-          response: newResponse as unknown as Record<string, unknown>,
+          response: { output: maskedSnippet },
         },
       };
 
@@ -211,69 +220,65 @@ export class ObservationMaskingService {
     const response = part.functionResponse.response as Record<string, unknown>;
     if (!response) return null;
 
-    if (typeof response === 'string') return response;
-    if (typeof response === 'object') {
-      if ('output' in response && typeof response['output'] === 'string')
-        return response['output'];
-      if ('result' in response && typeof response['result'] === 'string')
-        return response['result'];
-      if ('stdout' in response && typeof response['stdout'] === 'string')
-        return response['stdout'];
-      if ('content' in response && typeof response['content'] === 'string')
-        return response['content'];
-    }
-    return null;
+    // Stringify the entire response for saving.
+    // This handles any tool output schema automatically.
+    const content = JSON.stringify(response, null, 2);
+
+    // Multimodal safety check: Sibling parts (inlineData, etc.) are handled by mask()
+    // by keeping the original part structure and only replacing the functionResponse content.
+
+    return content;
   }
 
   private isAlreadyMasked(content: string): boolean {
-    return content.includes('[Observation Masked]');
+    return content.includes('<observation_masked_guidance');
   }
 
-  private formatMaskedSnippet(
-    content: string,
-    filePath: string,
-    toolName: string,
-    totalTokens: number,
-  ): string {
+  private formatShellPreview(response: Record<string, unknown>): string {
+    const output = response['output'] || response['stdout'] || '';
+    const content =
+      typeof output === 'string' ? output : JSON.stringify(output);
     const lines = content.split('\n');
-    const totalLines = lines.length;
-    const fileSizeMB = (
-      Buffer.byteLength(content, 'utf8') /
-      1024 /
-      1024
-    ).toFixed(2);
+    let preview = lines.slice(0, 3).join('\n');
 
-    // Smart Truncation: keep first and last SMART_TRUNCATION_TOKENS tokens.
-    // We use a safe character proxy (4 chars per token) to slice.
-    const charLimit = SMART_TRUNCATION_TOKENS * 4;
+    const exitCode = response['exitCode'] ?? response['exit_code'];
+    const error = response['error'];
 
-    if (totalTokens <= SMART_TRUNCATION_TOKENS * MIN_SAVINGS_MULTIPLIER) {
-      return content; // Too small to mask meaningfully
+    if (exitCode !== undefined && exitCode !== 0 && exitCode !== null) {
+      preview += `\n[Exit Code: ${exitCode}]`;
     }
+    if (error) {
+      preview += `\n[Error: ${error}]`;
+    }
+    return preview;
+  }
 
-    const head = content.slice(0, charLimit);
-    const tail = content.slice(-charLimit);
-
+  private formatMaskedSnippet(params: MaskedSnippetParams): string {
+    const { toolName, filePath, fileSizeMB, totalLines, tokens, preview } =
+      params;
     return `[Observation Masked]
-${head}
-... [TRUNCATED ${totalLines.toLocaleString()} LINES | ${fileSizeMB}MB | ~${totalTokens.toLocaleString()} TOKENS] ...
-${tail}
-
 <observation_masked_guidance tool_name="${toolName}">
-  <summary>
-    Data from tool "${toolName}" was offloaded to save context space.
-  </summary>
+  <preview>${preview}</preview>
   <details>
     <file_path>${filePath}</file_path>
-    <line_count>${totalLines.toLocaleString()}</line_count>
     <file_size>${fileSizeMB}MB</file_size>
-    <estimated_total_tokens>${totalTokens.toLocaleString()}</estimated_total_tokens>
+    <line_count>${totalLines.toLocaleString()}</line_count>
+    <estimated_total_tokens>${tokens.toLocaleString()}</estimated_total_tokens>
   </details>
   <instructions>
     The full output is available at the path above. 
-    You can inspect it using tools like 'search_file_content' or 'read_file'.
-    Note: Reading the full file will use approximately ${totalTokens.toLocaleString()} tokens.
+    You can inspect it using tools like '${GREP_TOOL_NAME}' or '${READ_FILE_TOOL_NAME}'.
+    Note: Reading the full file will use approximately ${tokens.toLocaleString()} tokens.
   </instructions>
 </observation_masked_guidance>`;
   }
+}
+
+interface MaskedSnippetParams {
+  toolName: string;
+  filePath: string;
+  fileSizeMB: string;
+  totalLines: number;
+  tokens: number;
+  preview: string;
 }
