@@ -715,6 +715,9 @@ export class Config {
     this.modelAvailabilityService = new ModelAvailabilityService();
     this.previewFeatures = params.previewFeatures ?? undefined;
     this.experimentalJitContext = params.experimentalJitContext ?? false;
+    debugLogger.log(
+      `Observation masking enabled: ${params.observationMaskingEnabled}`,
+    );
     this.observationMaskingEnabled = params.observationMaskingEnabled ?? false;
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
     this.experimentalZedIntegration =
